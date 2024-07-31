@@ -1,89 +1,61 @@
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.0"
+provider "google" {
+  project = "jumpbox-427107"
+  region  = "europe-west4-b"  # Bölgenizi buraya girin
+}
 
-  cluster_name    = "my-cluster"
-  cluster_version = "1.27"
+resource "google_container_cluster" "gke_cluster" {
+  name               = "my-cluster"
+  location           = "europe-west4-b"  # Bölgenizi buraya girin
+  initial_node_count = 1
+  min_master_version = "1.27"
 
-  cluster_endpoint_public_access  = true
-
-  cluster_addons = {
-    coredns = {
-      most_recent = true
-    }
-    kube-proxy = {
-      most_recent = true
-    }
-    vpc-cni = {
-      most_recent = true
-    }
+  node_config {
+    machine_type = "e2-medium"
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform",
+    ]
   }
 
-  vpc_id                   = module.vpc.vpc_id
-  subnet_ids               = module.vpc.private_subnets
-  control_plane_subnet_ids = module.vpc.public_subnets
-
-  # EKS Managed Node Group(s)
-  eks_managed_node_group_defaults = {
-    instance_types = ["m6i.large", "m5.large", "m5n.large", "t3.large"]
+ 
+  ip_allocation_policy {
+    use_ip_aliases = true
   }
 
-  eks_managed_node_groups = {
-
-    green = {
-      use_custom_launch_template = false
-      min_size     = 1
-      max_size     = 10
-      desired_size = 1
-
-      instance_types = ["t3.large"]
-      capacity_type  = "SPOT"
-    }
-  }
-
-  # Fargate Profile(s)
-  fargate_profiles = {
-    default = {
-      name = "default"
-      selectors = [
-        {
-          namespace = "default"
-        }
-      ]
-    }
-  }
-
-  # aws-auth configmap
-  manage_aws_auth_configmap = false
-
-  aws_auth_roles = [
-    {
-      rolearn  = "arn:aws:iam::594182463744:role/role1"
-      username = "role1"
-      groups   = ["system:masters"]
-    },
-  ]
-
-  aws_auth_users = [
-    {
-      userarn  = "arn:aws:iam::594182463744:user/user1"
-      username = "user1"
-      groups   = ["system:masters"]
-    },
-    {
-      userarn  = "arn:aws:iam::594182463744:user/user2"
-      username = "user2"
-      groups   = ["system:masters"]
-    },
-  ]
-
-  aws_auth_accounts = [
-    "594182463744",
-    "888888888888",
-  ]
-
-  tags = {
+  
+  labels = {
     Environment = "dev"
     Terraform   = "true"
   }
 }
+
+resource "google_container_node_pool" "default_pool" {
+  name       = "default-pool"
+  location   = "europe-west4-b"  # Bölgenizi buraya girin
+  cluster    = google_container_cluster.gke_cluster.id
+  node_count = 3
+
+  node_config {
+    machine_type = "e2-medium"
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform",
+    ]
+  }
+
+  management {
+    auto_repair = true
+    auto_upgrade = true
+  }
+}
+
+output "cluster_name" {
+  value = google_container_cluster.gke_cluster.name
+}
+
+output "cluster_endpoint" {
+  value = google_container_cluster.gke_cluster.endpoint
+}
+
+output "cluster_ca_certificate" {
+  value = google_container_cluster.gke_cluster.master_auth.0.cluster_ca_certificate
+}
+

@@ -1,5 +1,4 @@
 terraform {
-
   cloud {
     organization = "devops-project-org"
 
@@ -9,6 +8,8 @@ terraform {
   }
 }
 
-provider "aws" {
-  region = "us-east-1"  
+provider "google" {
+  project = " jumpbox-427107"
+  region  = "europe-west4-b" 
 }
+
