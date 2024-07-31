@@ -1,3 +1,6 @@
+first attempt read
+
+
 <p align="center">
   <img src="https://global.hitachi-solutions.com/wp-content/uploads/2019/09/Offer-2-02.png" alt="DevOps Workshop CI/CD">
 </p>
